@@ -16,36 +16,37 @@ import { useState } from "react";
 import useShowToast from "../hooks/useShowToast";
 import { useRecoilValue } from "recoil";
 import userAtom from "../atoms/userAtom";
+import UpdateAvatar from "./UpdateAvatar";
 
-function UpdateProfile({user, setUser}) {
+function UpdateProfile({ user }) {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [inputs, setInputs] = useState(false);
   const [updating, setUpdating] = useState(false);
   const showToast = useShowToast();
   const currentUser = useRecoilValue(userAtom);
   const handleEditProfile = async () => {
-    if(!inputs) {
+    if (!inputs) {
       handleCancel();
       return;
     }
-    if(updating) return;
+    if (updating) return;
     setUpdating(true);
     try {
+      let formData = new FormData();
+      formData.append("bio", inputs.bio ?? null);
+      formData.append("link", inputs.link ?? null);
+      formData.append("file", inputs.file);
       const res = await fetch(`/api/users/profile/${currentUser._id}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(inputs),
+        body: formData,
       });
       const result = await res.json();
       if (result.status === "error") {
         showToast(result.code, result.message, result.status);
         return;
       }
-      setUser(result.metadata);
-      showToast(result.code, result.message, result.status);
-
+      user = result.metadata;
+      showToast(result.statusCode, result.message, 'success');
     } catch (err) {
       showToast("Error", err, "error");
     } finally {
@@ -58,7 +59,7 @@ function UpdateProfile({user, setUser}) {
   const handleCancel = async () => {
     setInputs(false);
     onClose();
-  }
+  };
 
   return (
     <>
@@ -69,6 +70,13 @@ function UpdateProfile({user, setUser}) {
           <ModalHeader>Edit your account</ModalHeader>
           <ModalBody pb={6}>
             <FormControl>
+              <FormLabel>
+                <UpdateAvatar
+                  user={user}
+                  inputs={inputs}
+                  setInputs={setInputs}
+                />
+              </FormLabel>
               <FormLabel>Bio</FormLabel>
               <Textarea
                 placeholder={"Write bio"}
@@ -89,7 +97,13 @@ function UpdateProfile({user, setUser}) {
           </ModalBody>
 
           <ModalFooter>
-            <Button colorScheme="gray" mr={3} onClick={handleEditProfile} isLoading={updating}>
+            <Button
+              bg="white.light"
+              colorScheme="gray.light"
+              mr={3}
+              onClick={handleEditProfile}
+              isLoading={updating}
+            >
               Save
             </Button>
             <Button onClick={handleCancel}>Cancel</Button>

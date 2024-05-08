@@ -30,7 +30,7 @@ const uploadMultipleImages = async ({ files, folderName, name}) => {
 }
 
 const destroyImage = async (path) => {
-    return await cloudinary.uploader.destroy(path.split('/').pop().split('.')[0]);
+    return await cloudinary.uploader.destroy(`${folderName}${path.split('/').pop().split('.')[0]}`);
 }
 
 module.exports = {

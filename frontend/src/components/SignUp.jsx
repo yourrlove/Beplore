@@ -27,10 +27,12 @@ export default function SignUp() {
   const [showPassword, setShowPassword] = useState(false);
   const setAuthScreenState = useSetRecoilState(authScreenAtom);
   const [inputs, setInputs] = useState(false);
+  const [loading, setLoading] = useState(false);
   const showToast = useShowToast();
   const setUser = useSetRecoilState(userAtom);
 
   const handleSingup = async () => {
+    setLoading(true);
     try {
       const res = await fetch("/api/users/signup", {
         method: "POST",
@@ -46,8 +48,11 @@ export default function SignUp() {
       }
       localStorage.setItem('user-threads', JSON.stringify(data.metadata));
       setUser(data.metadata);
+      showToast(data.statusCode, data.message, 'success');
     } catch (err) {
       showToast("Error", err, "error");
+    } finally {
+      setLoading(false);
     }
   } 
 
@@ -117,7 +122,6 @@ export default function SignUp() {
             </FormControl>
             <Stack spacing={10} pt={2}>
               <Button
-                loadingText="Submitting"
                 size="lg"
                 bg={useColorModeValue("gray.600", "gray.700")}
                 color={"white"}
@@ -125,6 +129,8 @@ export default function SignUp() {
                   bg: useColorModeValue("gray.700", "gray.800"),
                 }}
                 onClick={handleSingup}
+                isLoading={loading}
+                loadingText="Submitting..."
               >
                 Sign up
               </Button>

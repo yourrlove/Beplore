@@ -26,10 +26,10 @@ import { useState } from "react";
 import useShowToast from "../hooks/useShowToast";
 import { useRecoilState, useRecoilValue } from "recoil";
 import userAtom from "../atoms/userAtom";
+import { useNavigate } from "react-router-dom";
 import postsAtom from "../atoms/postsAtom";
-import { useParams } from "react-router-dom";
 
-const CreatePost = () => {
+const CreateComment = ({ post }) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const {
     isOpen: isOpenAlertDialog,
@@ -37,12 +37,12 @@ const CreatePost = () => {
     onClose: onCloseAlertDialog,
   } = useDisclosure();
   const user = useRecoilValue(userAtom);
+  const [posts, setPosts] = useRecoilState(postsAtom);
   const [imgUrl, setImgUrl] = useState(null);
   const [inputs, setInput] = useState(false);
-  const [posts, setPosts] = useRecoilState(postsAtom);
+  const [isreplying, setIsReplying] = useState(false);
   const showToast = useShowToast();
-  const {userName} = useParams();
-
+  const navigate = useNavigate();
   const handleClose = async () => {
     try {
       setInput(false);
@@ -54,14 +54,23 @@ const CreatePost = () => {
     }
   };
 
-  const handleCreatePost = async () => {
+  const handleOpen = async () => {
+    onOpen();
+  }
+
+  const handleAddComment = async () => {
+    if(!user) {
+      return showToast("Error!", "You must be logged in to like posts.", "error");
+    }
+    if(isreplying) return;
+    setIsReplying(true);
     try {
       let formData = new FormData();
       formData.append("userId", user._id);
-      formData.append("content", inputs.content);
+      formData.append("text", inputs.text);
       formData.append("file", inputs.file);
 
-      const res = await fetch("/api/posts", {
+      const res = await fetch(`/api/posts/${post._id}/comments`, {
         method: "POST",
         body: formData,
       });
@@ -70,38 +79,47 @@ const CreatePost = () => {
         showToast(result.code, result.message, result.status);
         return;
       }
-      showToast(result.statusCode, result.message, 'success');
-      if(userName === user.userName) {
-        setPosts([result.metadata, ...posts]);
-      }
+      showToast(result.statusCode, result.message, "success");
+      const updatedPosts = posts.map(p => {
+        if(p._id === post._id) {
+          return { ...p, comments: [...p.comments, result.metadata ] };
+        }
+        return p;
+      });
+      setPosts(updatedPosts);
     } catch (err) {
       showToast("Error", err, "error");
     } finally {
+      setIsReplying(false);
       handleClose();
     }
   };
   return (
     <>
       <Flex>
-        <Avatar my={2} size="sm" name="NTR Knight" src="/bached.jpg" />
-        <Flex flex={1} flexDirection={"column"}>
-          <Flex bg="dark" onClick={onOpen} cursor="text">
-            <Box flexGrow={1} color="gray.light" pl={4} pt={3}>
-              <span>Start a thread...</span>
-            </Box>
-            <Button
-              bg="white.light"
-              color="black"
-              rounded="full"
-              onClick={onOpen}
-            >
-              Post
-            </Button>
-          </Flex>
-        </Flex>
+        <svg
+          aria-label="Comment"
+          color=""
+          fill=""
+          height="20"
+          role="img"
+          viewBox="0 0 24 24"
+          width="20"
+          onClick={handleOpen}
+        >
+          <title>Comment</title>
+          <path
+            d="M20.656 17.008a9.993 9.993 0 1 0-3.59 3.615L22 22Z"
+            fill="none"
+            stroke="currentColor"
+            strokeLinejoin="round"
+            strokeWidth="2"
+          ></path>
+        </svg>
       </Flex>
 
       <Modal
+      
         isOpen={isOpen}
         onClose={() => {
           inputs ? onOpenAlertDialog() : handleClose();
@@ -111,30 +129,72 @@ const CreatePost = () => {
         <ModalOverlay />
         <ModalContent bg="gray.dark" rounded="lg" maxWidth="620px">
           <ModalHeader>
-            <Center color="white.light">New Post</Center>
+            <Center color="white.light">Comment</Center>
           </ModalHeader>
           <ModalBody>
+            <Flex gap={3} mb={4} >
+              <Flex flexDirection={"column"} alignItems={"center"}>
+                <Avatar
+                  size="md"
+                  name={post?.postedBy.profile.name}
+                  src={post?.postedBy.profile.avatar}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate(`/${post.postedBy.userName}`);
+                  }}
+                />
+                <Box w="1px" h={"full"} bg="gray.light" my={2}></Box>
+              </Flex>
+              <Flex flex={1} flexDirection={"column"} gap={2}>
+                <Flex justify={"space-between"} w={"full"}>
+                  <Flex w={"full"} alignItems={"center"}>
+                    <Text
+                      className="text-underline"
+                      fontSize={"sm"}
+                      fontWeight={"bold"}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        navigate(`/${post?.postedBy.userName}`);
+                      }}
+                    >
+                      {post?.postedBy.userName}
+                    </Text>
+                    <Image src="/verified.png" w={4} h={4} ml={1} />
+                  </Flex>
+                </Flex>
+                <Text fontSize={"sm"}>{post?.content}</Text>
+                {post?.image && (
+                  <Box
+                    borderRadius={6}
+                    overflow={"hidden"}
+                    border={"1px solid"}
+                    borderColor={"gray.light"}
+                  >
+                    <Image src={post.image} w={"full"} />
+                  </Box>
+                )}
+              </Flex>
+            </Flex>
             <Flex gap={3}>
               <Flex flexDirection={"column"} alignItems={"center"}>
-                <Avatar size="md" name="NTR Knight" src="/bached.jpg" />
+                <Avatar size="md" name={user?.userName} src={user?.avatar} />
                 <Box w="1px" h={"full"} bg="gray.light" my={2}></Box>
               </Flex>
               <Flex flex={1} flexDirection={"column"} gap={2}>
                 <Flex justify={"space-between"} w={"full"}>
                   <Flex w={"full"} alignItems={"center"}>
                     <Text fontSize={"sm"} fontWeight={"bold"}>
-                      ntrknight
+                      {user?.userName}
                     </Text>
                     <Image src="/verified.png" w={4} h={4} ml={1} />
                   </Flex>
                 </Flex>
                 <AutoResizeTextarea
-                  placeholder="Start a thread..."
-                  size="lg"
+                  placeholder={`Reply to ${post?.postedBy.userName} ...`}
                   onChange={(e) =>
-                    setInput({ ...inputs, content: e.target.value })
+                    setInput({ ...inputs, text: e.target.value })
                   }
-                  value={inputs.content}
+                  value={inputs.text}
                 />
                 {imgUrl && (
                   <Flex gap={3} w={"full"} position={"relative"}>
@@ -165,7 +225,8 @@ const CreatePost = () => {
                 color="black"
                 // isActive="fasle"
                 rounded="full"
-                onClick={handleCreatePost}
+                onClick={handleAddComment}
+                isLoading={isreplying}
               >
                 Post
               </Button>
@@ -200,4 +261,4 @@ const CreatePost = () => {
   );
 };
 
-export default CreatePost;
+export default CreateComment;

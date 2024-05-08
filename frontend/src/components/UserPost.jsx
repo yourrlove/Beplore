@@ -69,10 +69,10 @@ const UserPost = ({ postImg, postTitle, likes, replies }) => {
             </Box>
           )}
 
-          <Flex gap={3} my={3}>
+          {/* <Flex gap={3} my={3}>
             <Actions liked={liked} setLiked={setLiked} />
-          </Flex>
-          <Flex gap={2} alignItems={"center"}>
+          </Flex> */}
+          {/* <Flex gap={2} alignItems={"center"}>
             <Text color={"gray.light"} fontSize="sm">
               {replies} replies
             </Text>
@@ -80,7 +80,7 @@ const UserPost = ({ postImg, postTitle, likes, replies }) => {
             <Text color={"gray.light"} fontSize="sm">
               {likes} likes
             </Text>
-          </Flex>
+          </Flex> */}
         </Flex>
       </Flex>
     </Link>

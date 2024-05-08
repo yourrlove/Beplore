@@ -1,43 +1,67 @@
-import { useEffect, useState } from "react"
-import UserHeader from "../components/UserHeader"
-import UserPost from "../components/UserPost"
-import { useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import UserHeader from "../components/UserHeader";
+import UserPost from "../components/UserPost";
+import { useParams, useLocation } from "react-router-dom";
 import useShowToast from "../hooks/useShowToast";
+import { Flex, Spinner } from "@chakra-ui/react";
+import Post from "../components/Post";
+import useGetUser from "../hooks/useGetUser";
+import { useRecoilState } from "recoil";
+import postsAtom from "../atoms/postsAtom";
 
 const UserPage = () => {
-  const [user, setUser] = useState(null);
-  const { username } = useParams();
+  const {user, loading} = useGetUser();
+  const { userName } = useParams();
   const showToast = useShowToast();
+  const location = useLocation();
+  const [posts, setPosts] = useRecoilState(postsAtom);
+  const [fetchingPosts, setFetchingPosts] = useState(false);
 
   useEffect(() => {
-    const getUser = async () => {
+    const getPosts = async () => {
+      setFetchingPosts(true);
       try {
-        const res = await fetch(`/api/users/${username}`, {
+        const res = await fetch(`/api/posts/user/${userName}`, {
           method: "GET",
-          headers: {
-            'Authorization': "Bearer ",
-          },
         });
         const result = await res.json();
-        if (result.status === 'error') {
+        if (result.status === "error") {
           showToast(result.code, result.message, result.status);
           return;
         }
-        setUser(result.metadata);
+        console.log(result.metadata);
+        setPosts(result.metadata);
       } catch (err) {
         showToast("Error", err, "error");
+      } finally {
+        setFetchingPosts(false);
       }
-    };
-    getUser();
-  }, [username, showToast]);
-  
-  if(!user) return null;
-  return <>
-    <UserHeader user={user} setUser={setUser}/>
-    <UserPost likes={1200} replies={481} postImg="/post1.png" postTitle="Let's talk about threads."/>
-    <UserPost likes={2600} replies={200} postImg="/company.png" postTitle="We need you!."/>
-    <UserPost likes={3200} replies={100} postImg="/bached.jpg" postTitle="My new avatar:)!."/>
-  </>
-}
+    }
 
-export default UserPage
+    getPosts();
+  }, [userName, showToast, location, setPosts]);
+  if (!user && loading) {
+    return (
+      <Flex justifyContent={"center"}>
+        <Spinner size="xl" />
+      </Flex>
+    );
+  }
+  if (!user && !loading) return null;
+  return (
+    <>
+      <UserHeader user={user}/>
+      {!fetchingPosts && posts?.length === 0 && <h1>Start your first thread.</h1>}
+      {fetchingPosts && (
+        <Flex justifyContent={"center"} my={12}>
+          <Spinner size="xl" />
+        </Flex>
+      )}
+      {posts.map(post => (
+        <Post key={post._id} post={post} postedBy={post.postedBy}/>
+      ))}
+    </>
+  );
+};
+
+export default UserPage;

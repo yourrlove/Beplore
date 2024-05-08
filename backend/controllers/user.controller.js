@@ -52,7 +52,7 @@ class UserController {
     updateUserProfile = async (req, res, next) => {
         new OK({
             message: 'User information updated successfully',
-            metadata: await UserService.updateProfile(req.params.userId, req.body)
+            metadata: await UserService.updateProfile(req.params.userId, {...req.body, file: req.file})
         }).send(res);
     }
 
@@ -60,6 +60,13 @@ class UserController {
         new OK({
             message: 'User information updated successfully',
             metadata: await UserService.updateFollow(req.user._id, req.params.targetUserId)
+        }).send(res);
+    }
+
+    updateUserAvatar = async (req, res, next) => {
+        new OK({
+            message: 'User Avatar updated successfully',
+            metadata: await UserService.updateAvatar(req.params.userId, req.file)
         }).send(res);
     }
 }

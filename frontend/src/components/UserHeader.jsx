@@ -19,10 +19,12 @@ import UpdateProfile from "./UpdateProfile";
 import { useState } from "react";
 import useShowToast from "../hooks/useShowToast";
 
-const UserHeader = ({ user, setUser }) => {
+const UserHeader = ({ user }) => {
   const showToast = useShowToast();
   const currentUser = useRecoilValue(userAtom);
-  const [following, setFollowing] = useState(user.profile.followers.includes(currentUser._id));
+  const [following, setFollowing] = useState(
+    user.profile.followers.includes(currentUser._id)
+);
   const [updating, setUpdating] = useState(false);
 
   const copyURL = () => {
@@ -33,7 +35,7 @@ const UserHeader = ({ user, setUser }) => {
   };
 
   const handleFollow = async () => {
-    if(!currentUser) {
+    if (!currentUser) {
       showToast("Error", "You must be logged in to follow users.", "error");
       return;
     }
@@ -44,15 +46,16 @@ const UserHeader = ({ user, setUser }) => {
         method: "PUT",
       });
       const result = await res.json();
-      if (result.status === 'error') {
+      if (result.status === "error") {
         showToast(result.code, result.message, result.status);
         return;
       }
-      setUser(result.metadata);
       if (following) {
         showToast("Success!", `Unfollowed ${user.userName}`, "success");
+        user.profile.followers.pop();
       } else {
         showToast("Success!", `Followed ${user.userName}`, "success");
+        user.profile.followers.push(currentUser._id);
       }
       setFollowing(!following);
     } catch (err) {
@@ -60,8 +63,8 @@ const UserHeader = ({ user, setUser }) => {
     } finally {
       setUpdating(false);
     }
-  }
-  
+  };
+
   return (
     <VStack gap={4} align={"start"}>
       <Flex justify="space-between" w={"full"}>
@@ -94,7 +97,7 @@ const UserHeader = ({ user, setUser }) => {
 
       <Text>{user.profile.bio}</Text>
       {currentUser._id === user._id && (
-        <UpdateProfile user={user} setUser={setUser} />
+        <UpdateProfile user={user} />
       )}
       {currentUser._id !== user._id && (
         <Button size={"sm"} onClick={handleFollow} isLoading={updating}>

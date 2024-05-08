@@ -3,6 +3,7 @@ const { BadRequestError } = require("../core/error.response");
 const { getInfoData, flattenNestedObject } = require("../utils/index");
 const { createKeyToken } = require("../utils/authUtils");
 const bcrypt = require("bcrypt");
+const { uploadImage, destroyImage } = require("../services/upload.service");
 
 class UserService {
   static create = async ({ username, name, email, password }) => {
@@ -26,17 +27,22 @@ class UserService {
     });
 
     const token = createKeyToken(
-        { _id: user._id },
-        process.env.ACCESS_TOKEN_KEY_SECRET
+      { _id: user._id },
+      process.env.ACCESS_TOKEN_KEY_SECRET
     );
 
     return {
       token: token,
-      user: getInfoData(['_id', 'userName', 'avatar'], flattenNestedObject(user, ['profile'])),
-    }
+      user: getInfoData(
+        ["_id", "userName", "avatar"],
+        flattenNestedObject(user, ["profile"])
+      ),
+    };
   };
 
   static login = async ({ email, password }) => {
+    console.log(email, password);
+
     const user = await User.findOne({ email: email });
     if (!user) {
       throw new BadRequestError("Wrong email!");
@@ -48,13 +54,16 @@ class UserService {
 
     const token = createKeyToken(
       { _id: user._id },
-      process.env.ACCESS_TOKEN_KEY_SECRET,
+      process.env.ACCESS_TOKEN_KEY_SECRET
     );
 
     return {
       token: token,
-      user: getInfoData(['_id', 'userName', 'avatar'], flattenNestedObject(user, ['profile'])),
-    }
+      user: getInfoData(
+        ["_id", "userName", "avatar"],
+        flattenNestedObject(user, ["profile"])
+      ),
+    };
   };
 
   static logout = async (userId) => {
@@ -63,48 +72,52 @@ class UserService {
       throw new BadRequestError("User not found!");
     }
     return;
-  }
+  };
 
   static getUserInfor = async ({ userId }) => {
     const user = await User.findById({ _id: _id });
     if (!user) {
       throw new BadRequestError("User not found!");
     }
-    return getInfoData(['userName', 'email', 'profile'], user);
-  }
+    return getInfoData(["userName", "email", "profile"], user);
+  };
 
-  static getByUsername = async ( username ) => {
+  static getByUsername = async (username) => {
     const user = await User.findOne({ userName: username });
     if (!user) {
       throw new BadRequestError("User not found!");
     }
-    return getInfoData(['_id', 'userName', 'email', 'profile'], user);
-  }
+    return getInfoData(["_id", "userName", "email", "profile"], user);
+  };
 
-  static updateProfile = async ( userId, { bio, link }) => {
-    const user = await User.findOneAndUpdate(
-      { _id: userId },
-      {
-        $set: {
-          "profile.bio": bio,
-          "profile.link": link,
-        },
-      },
-      { new: true }
-    );
+  static updateProfile = async (userId, { bio, link, file}) => {
+    const user = await User.findById(userId);
     if (!user) {
       throw new BadRequestError("User not found!");
     }
-    return getInfoData(['_id', 'userName', 'email', 'profile'], user);
-  }
+    if (file) {
+      if (user.profile.avatar) {
+        await destroyImage(user.profile.avatar);
+      }
+      const { image_url } = await uploadImage({
+        path: file.path,
+        name: `${user.userName}-avatar`,
+      });
+      user.profile.avatar = image_url;
+    }
+    if(bio !== 'undefined' && bio !== 'null') user.profile.bio = bio;
+    if(link !== 'undefined' && link !== 'null') user.profile.link = link;
+    await user.save();
+    return getInfoData(["_id", "userName", "email", "profile"], user);
+  };
 
   static updateFollow = async (currentUserId, userIdTarget) => {
     let currentUser = await User.findOne({ _id: currentUserId });
-    if(!currentUser) {
+    if (!currentUser) {
       throw new BadRequestError("Current user not found!");
     }
     let userTarget = await User.findOne({ _id: userIdTarget });
-    if(!userTarget) {
+    if (!userTarget) {
       throw new BadRequestError("Target user not found!");
     }
     if (currentUserId === userIdTarget) {
@@ -112,33 +125,72 @@ class UserService {
     }
 
     const isFollowing = userTarget.profile.followers.includes(currentUserId);
-    if(!isFollowing) {
+    if (!isFollowing) {
       // follow
-      userTarget = await User.findOneAndUpdate({ _id: userIdTarget }, {
-        $addToSet: {
-          "profile.followers": currentUserId,
-        }
-      }, { new: true }).lean();
-      currentUser = await User.findOneAndUpdate({ _id: currentUserId }, {
-        $addToSet: {
-          "profile.following": userIdTarget,
-        }
-      }, { new: true }).lean();
+      userTarget = await User.findOneAndUpdate(
+        { _id: userIdTarget },
+        {
+          $addToSet: {
+            "profile.followers": currentUserId,
+          },
+        },
+        { new: true }
+      ).lean();
+      currentUser = await User.findOneAndUpdate(
+        { _id: currentUserId },
+        {
+          $addToSet: {
+            "profile.following": userIdTarget,
+          },
+        },
+        { new: true }
+      ).lean();
     } else {
       // unfollow
-      userTarget = await User.findOneAndUpdate({ _id: userIdTarget }, {
-        $pull: {
-          "profile.followers": currentUserId,
-        }
-      }, { new: true }).lean();
-      currentUser = await User.findOneAndUpdate({ _id: currentUserId }, {
-        $pull: {
-          "profile.following": userIdTarget,
-        }
-      }, { new: true }).lean();
+      userTarget = await User.findOneAndUpdate(
+        { _id: userIdTarget },
+        {
+          $pull: {
+            "profile.followers": currentUserId,
+          },
+        },
+        { new: true }
+      ).lean();
+      currentUser = await User.findOneAndUpdate(
+        { _id: currentUserId },
+        {
+          $pull: {
+            "profile.following": userIdTarget,
+          },
+        },
+        { new: true }
+      ).lean();
     }
     return userTarget;
-  }
+  };
+
+  static updateAvatar = async (userId, file) => {
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new BadRequestError("User not found!");
+    }
+    if (!file) {
+      throw new BadRequestError("File missing!");
+    }
+    if (user.profile.avatar) {
+      await destroyImage(user.profile.avatar);
+    }
+    const { image_url } = await uploadImage({
+      path: file.path,
+      name: `${user.userName}-avatar`,
+    });
+    user.profile.avatar = image_url;
+    await user.save();
+    return getInfoData(
+      ["_id", "userName", "avatar"],
+      flattenNestedObject(user, ["profile"])
+    );
+  };
 }
 
 module.exports = UserService;

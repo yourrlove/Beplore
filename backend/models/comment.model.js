@@ -8,6 +8,11 @@ const commentSchema = new Schema({
         ref: 'User',
         required: true,
     },
+    postId: {
+        type: Schema.Types.ObjectId,
+        ref: 'Post',
+        required: true,
+    },
     text:{
         type:String,
         MaxLength: 500
