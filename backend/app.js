@@ -9,6 +9,7 @@ const mongoose = require('./configs/mongodb.config')
 
 const userRouter = require('./routes/user.route');
 const postRouter = require('./routes/post.route');
+const commentRouter = require('./routes/comment.route');
 
 app.use(logger('dev'));
 app.use(express.json());
@@ -20,6 +21,7 @@ app.get('/', (req, res) => {
 })
 app.use('/api/users', userRouter);
 app.use('/api/posts', postRouter);
+app.use('/api/comments', commentRouter);
 
 app.use((req, res, next) => {
     const error = new Error('Not Found');

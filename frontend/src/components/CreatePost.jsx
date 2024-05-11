@@ -71,7 +71,7 @@ const CreatePost = () => {
         return;
       }
       showToast(result.statusCode, result.message, 'success');
-      if(userName === user.userName) {
+      if(!userName || userName === user.userName ) {
         setPosts([result.metadata, ...posts]);
       }
     } catch (err) {
@@ -83,7 +83,7 @@ const CreatePost = () => {
   return (
     <>
       <Flex>
-        <Avatar my={2} size="sm" name="NTR Knight" src="/bached.jpg" />
+        <Avatar my={2} size="sm" name={user.userName} src={user.avatar} />
         <Flex flex={1} flexDirection={"column"}>
           <Flex bg="dark" onClick={onOpen} cursor="text">
             <Box flexGrow={1} color="gray.light" pl={4} pt={3}>
@@ -116,14 +116,14 @@ const CreatePost = () => {
           <ModalBody>
             <Flex gap={3}>
               <Flex flexDirection={"column"} alignItems={"center"}>
-                <Avatar size="md" name="NTR Knight" src="/bached.jpg" />
+                <Avatar size="md" name={user.userName} src={user.avatar} />
                 <Box w="1px" h={"full"} bg="gray.light" my={2}></Box>
               </Flex>
               <Flex flex={1} flexDirection={"column"} gap={2}>
                 <Flex justify={"space-between"} w={"full"}>
                   <Flex w={"full"} alignItems={"center"}>
                     <Text fontSize={"sm"} fontWeight={"bold"}>
-                      ntrknight
+                      {user.userName}
                     </Text>
                     <Image src="/verified.png" w={4} h={4} ml={1} />
                   </Flex>

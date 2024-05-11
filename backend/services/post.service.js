@@ -38,7 +38,6 @@ class PostService {
   };
 
   static update = async ({ userId, postId, content, file }) => {
-    console.log(userId);
     const user = await User.findOne({ _id: userId }).lean();
     if (!user) {
       throw new BadRequestError("User not found!");
@@ -122,7 +121,6 @@ class PostService {
   };
 
   static getAllPostsFollowing = async (userId) => {
-    console.log(userId);
     const user = await User.findById(userId);
     if (!user) {
       throw new BadRequestError("User not found!");
@@ -173,6 +171,33 @@ class PostService {
     return posts;
   };
 
+  static getPostsByKeyword = async ({ currentUser, keyword }) => {
+    let options = {};
+    if (keyword === "undefined") {
+      options = {
+        postedBy: { $ne: currentUser }
+      };
+    } else {
+      options = {
+        postedBy: { $ne: currentUser }, 
+        content: { $regex: new RegExp(keyword, "i") } 
+      };
+    }
+    const posts = await Post.find(options)
+      .select("-__v -updatedAt")
+      .populate("postedBy", "userName profile.name profile.avatar")
+      .populate({
+        path: "comments",
+        populate: {
+          path: "userId",
+          select: "userName profile.avatar",
+        },
+      })
+      .sort({ createdAt: -1 })
+      .lean();
+    return posts;
+  };
+
   static delete = async (postId) => {
     const post = await Post.findOne({ _id: postId });
     if (!post) {
@@ -182,7 +207,9 @@ class PostService {
       await destroyImage(post.image);
     }
     if (post.comments) {
-      await Comment.deleteMany({ postId: postId });
+      Comment.deleteMany({
+        parentComment: { $regex: new RegExp(postId, "i") },
+      });
     }
     return await Post.deleteOne({ _id: postId });
   };

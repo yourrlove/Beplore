@@ -31,7 +31,7 @@ const Header = () => {
         </Link>
       )}
       {user && (
-        <Link mr={[6, 16, 60, 160]} as={RouterLink} to="/">
+        <Link mr={[6, 16, 60, 160]} as={RouterLink} to="/search">
           <CiSearch size={30} />
         </Link>
       )}

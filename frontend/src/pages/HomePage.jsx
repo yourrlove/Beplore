@@ -15,7 +15,7 @@ const HomePage = () => {
       setLoading(true);
       setPosts([]);
       try {
-        const res = await fetch("/api/posts/feeds");
+        const res = await fetch("/api/posts/feeds/following");
         const result = await res.json();
         if (result.status === "error") {
           showToast(result.code, result.message, result.status);

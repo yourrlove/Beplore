@@ -69,6 +69,13 @@ class UserController {
             metadata: await UserService.updateAvatar(req.params.userId, req.file)
         }).send(res);
     }
+
+    getAllUsers = async (req, res, next) => {
+        new OK({
+            message: 'Users retrieved successfully',
+            metadata: await UserService.getAllUsers(req.query)
+        }).send(res);
+    }
 }
 
 module.exports = new UserController();

@@ -7,7 +7,8 @@ import AuthPage from "./pages/AuthPage";
 import { useRecoilValue } from "recoil";
 import userAtom from "./atoms/userAtom";
 import HomePage from "./pages/HomePage";
-import TestPage from "./pages/TestPage";
+import ReplyPage from "./pages/ReplyPage";
+import SearchPage from "./pages/SearchPage";
 
 function App() {
   const user = useRecoilValue(userAtom);
@@ -31,7 +32,8 @@ function App() {
             element={user ? <UserPage /> : <Navigate to="/auth" />}
           />
           <Route path="/:userName/post/:postId" element={user ? <PostPage /> : <Navigate to="/auth" />} />
-          <Route path="/test" element={<TestPage />} />
+          <Route path="/:userName/post/reply/:commentId" element={user ? <ReplyPage /> : <Navigate to="/auth" />} />
+          <Route path="/search" element={<SearchPage />} />
         </Routes>
       </Container>
     </VStack>

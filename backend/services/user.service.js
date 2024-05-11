@@ -90,7 +90,7 @@ class UserService {
     return getInfoData(["_id", "userName", "email", "profile"], user);
   };
 
-  static updateProfile = async (userId, { bio, link, file}) => {
+  static updateProfile = async (userId, { bio, link, file }) => {
     const user = await User.findById(userId);
     if (!user) {
       throw new BadRequestError("User not found!");
@@ -105,8 +105,8 @@ class UserService {
       });
       user.profile.avatar = image_url;
     }
-    if(bio !== 'undefined' && bio !== 'null') user.profile.bio = bio;
-    if(link !== 'undefined' && link !== 'null') user.profile.link = link;
+    if (bio !== "undefined" && bio !== "null") user.profile.bio = bio;
+    if (link !== "undefined" && link !== "null") user.profile.link = link;
     await user.save();
     return getInfoData(["_id", "userName", "email", "profile"], user);
   };
@@ -190,6 +190,28 @@ class UserService {
       ["_id", "userName", "avatar"],
       flattenNestedObject(user, ["profile"])
     );
+  };
+
+  static getAllUsers = async ({ currentUser, keyword }) => {
+    let options = {};
+    if (keyword === "undefined") {
+      options = { _id: { $ne: currentUser } };
+    } else {
+      options = {
+        _id: { $ne: currentUser },
+        $or: [
+          { userName: { $regex: new RegExp(keyword, "i") } },
+          { "profile.name": { $regex: new RegExp(keyword, "i") } },
+        ],
+      };
+    }
+    const users = await User.find(options)
+      .select("_id userName profile.name profile.avatar profile.followers")
+      .lean();
+    if (!users) {
+      throw new BadRequestError("Not have any registered user!");
+    }
+    return users;
   };
 }
 

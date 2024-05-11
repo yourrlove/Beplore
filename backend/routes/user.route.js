@@ -13,5 +13,6 @@ router.get('/:username', asyncHandler( userController.getUserDetails ));
 router.put('/profile/:userId', uploadDisk.single('file'), asyncHandler( userController.updateUserProfile ));
 router.put('/follow/:targetUserId', verifyToken, asyncHandler( userController.updateUserFollow ));
 router.put('/avatar/:userId', verifyToken, uploadDisk.single('file'), asyncHandler( userController.updateUserAvatar ));
+router.get('/', asyncHandler( userController.getAllUsers ));
 
 module.exports = router;

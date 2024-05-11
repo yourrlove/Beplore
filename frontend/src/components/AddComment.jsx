@@ -67,7 +67,7 @@ const CreateComment = ({ post }) => {
     try {
       let formData = new FormData();
       formData.append("userId", user._id);
-      formData.append("text", inputs.text);
+      formData.append("content", inputs.content);
       formData.append("file", inputs.file);
 
       const res = await fetch(`/api/posts/${post._id}/comments`, {
@@ -192,9 +192,9 @@ const CreateComment = ({ post }) => {
                 <AutoResizeTextarea
                   placeholder={`Reply to ${post?.postedBy.userName} ...`}
                   onChange={(e) =>
-                    setInput({ ...inputs, text: e.target.value })
+                    setInput({ ...inputs, content: e.target.value })
                   }
-                  value={inputs.text}
+                  value={inputs.content}
                 />
                 {imgUrl && (
                   <Flex gap={3} w={"full"} position={"relative"}>

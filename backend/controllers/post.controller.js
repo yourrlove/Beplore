@@ -25,11 +25,10 @@ class PostController {
     }
 
     updateCommentLikes = async (req, res, next) => {
-        try {
-            return res.json(await CommentService.updateLikes(req.params.userId, req.params.commentId));
-        } catch (err) {
-            console.log(err);
-        }
+        new OK({
+            message: 'Comment likes updated successfully',
+            metadata: await CommentService.updateLikes(req.user._id, req.params.commentId)
+        }).send(res);
     }
 
     getPost = async (req, res, next) => {
@@ -74,6 +73,27 @@ class PostController {
         new OK({
             message: 'User post deleted successfully',
             metadata: await PostService.delete(req.params.postId)
+        }).send(res);
+    }
+
+    getAllPostComments = async (req, res, next) => {
+        new OK({
+            message: 'Post comments retrieved successfully',
+            metadata: await CommentService.getAllPostComments(req.params.postId)
+        }).send(res);
+    }
+
+    deleteComment = async (req, res, next) => {
+        new OK({
+            message: 'Comment deleted successfully',
+            metadata: await CommentService.deleteComment(req.params.postId, req.params.commentId)
+        }).send(res);
+    }
+
+    getSearchPosts = async (req, res, next) => {
+        new OK({
+            message: 'Search posts retrieved successfully',
+            metadata: await PostService.getPostsByKeyword(req.query)
         }).send(res);
     }
 }

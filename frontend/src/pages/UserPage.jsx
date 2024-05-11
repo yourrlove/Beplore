@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import UserHeader from "../components/UserHeader";
-import UserPost from "../components/UserPost";
 import { useParams, useLocation } from "react-router-dom";
 import useShowToast from "../hooks/useShowToast";
 import { Flex, Spinner } from "@chakra-ui/react";
@@ -29,7 +28,6 @@ const UserPage = () => {
           showToast(result.code, result.message, result.status);
           return;
         }
-        console.log(result.metadata);
         setPosts(result.metadata);
       } catch (err) {
         showToast("Error", err, "error");

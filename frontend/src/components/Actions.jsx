@@ -28,7 +28,7 @@ const Actions = ({ post }) => {
         showToast(result.code, result.message, result.status);
         return;
       }
-      if(liked) {
+      if(!liked) {
         const updatedPosts = posts.map(p => {
           if(p._id === post._id) {
             return { ...p, likes: [...p.likes, currentUser._id ] };

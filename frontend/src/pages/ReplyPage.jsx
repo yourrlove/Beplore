@@ -18,60 +18,60 @@ import {
 } from "@chakra-ui/react";
 import { BsThreeDots } from "react-icons/bs";
 import { useEffect, useState } from "react";
-import Actions from "../components/Actions";
-import Comment from "../components/Comment";
 import useGetUser from "../hooks/useGetUser";
 import useShowToast from "../hooks/useShowToast";
 import { useNavigate, useParams } from "react-router-dom";
 import { useRecoilState, useRecoilValue } from "recoil";
-import postsAtom from "../atoms/postsAtom";
 import commentsAtom from "../atoms/commentsAtom";
 import { format, formatDistanceToNowStrict } from "date-fns";
 import userAtom from "../atoms/userAtom";
+import CommentActions from "../components/CommentActions";
+import repliesAtom from "../atoms/repliesAtom";
+import Comment from "../components/Comment";
 
-const PostPage = () => {
+const ReplyPage = () => {
   const { onOpen, onClose, isOpen } = useDisclosure();
-  const { postId } = useParams();
+  const { commentId } = useParams();
   const { user, loading } = useGetUser();
-  const [posts, setPosts] = useRecoilState(postsAtom);
   const [comments, setComments] = useRecoilState(commentsAtom);
+  const [replies, setReplies] = useRecoilState(repliesAtom);
   const [fetchingComments, setFetchingComments] = useState(false);
   const showToast = useShowToast();
   const navigate = useNavigate();
   const currentUser = useRecoilValue(userAtom);
+  const currentComment = comments[0];
 
-  const currentPost = posts[0];
   useEffect(() => {
     const getPost = async () => {
-      setPosts([]);
+      setComments([]);
       try {
-        const res = await fetch(`/api/posts/${postId}`);
+        const res = await fetch(`/api/comments/${commentId}`);
         const result = await res.json();
         if (result.status === "error") {
           showToast(result.code, result.message, result.status);
           return;
         }
-        setPosts([result.metadata]);
+        setComments([result.metadata]);
       } catch (err) {
         showToast("Error", err, "error");
       }
     };
     getPost();
-  }, [postId, showToast, setPosts]);
+  }, [commentId, showToast, setComments]);
 
   useEffect(() => {
     const getComments = async () => {
-      if (!currentPost) return;
+      if (!currentComment || !currentComment.replies) return;
       setFetchingComments(true);
-      setComments([]);
+      setReplies([]);
       try {
-        const res = await fetch(`/api/posts/${currentPost._id}/comments`);
+        const res = await fetch(`/api/comments/${currentComment._id}/replies`);
         const result = await res.json();
         if (result.status === "error") {
           showToast(result.code, result.message, result.status);
           return;
         }
-        setComments(result.metadata);
+        setReplies(result.metadata);
       } catch (err) {
         showToast("Error", err, "error");
       } finally {
@@ -79,13 +79,20 @@ const PostPage = () => {
       }
     };
     getComments();
-  }, [showToast, setComments, currentPost]);
+  }, [showToast, setReplies, currentComment]);
 
-  const handleDeletePost = async (e) => {
+  const handleDeleteComment = async (e) => {
     e.preventDefault();
     try {
-      if (!window.confirm("Are you sure you want to delete this post?")) return;
-      const res = await fetch(`/api/posts/${currentPost._id}`, {
+      if (!window.confirm("Are you sure you want to delete this comment?"))
+        return;
+      const pathComments = currentComment.parentComment.split(",");
+      const parentComment = pathComments.pop();
+      const url =
+        pathComments.length > 0
+          ? `/api/comments/${parentComment}/replies/${currentComment._id}`
+          : `/api/posts/${parentComment}/comments/${currentComment._id}`;
+      const res = await fetch(url, {
         method: "DELETE",
       });
       const result = await res.json();
@@ -94,7 +101,12 @@ const PostPage = () => {
         return;
       }
       showToast(result.statusCode, result.message, "success");
-      navigate(`/${user.userName}`);
+      if(pathComments.length > 0) {
+        navigate(`/${user.userName}/post/reply/${parentComment}`);
+      } else {
+        navigate(`/${user.userName}/post/${parentComment}`);
+      }
+
     } catch (err) {
       showToast("Error", err, "error");
     } finally {
@@ -102,11 +114,11 @@ const PostPage = () => {
     }
   };
   const formatDate = () => {
-    const result = formatDistanceToNowStrict(new Date(currentPost.createdAt)).split(
-      " "
-    );
+    const result = formatDistanceToNowStrict(
+      new Date(currentComment.createdAt)
+    ).split(" ");
     if (result[0] > 7 && result[1] === "days") {
-      return format(new Date(currentPost.createdAt), "MM/dd/yyyy");
+      return format(new Date(currentComment.createdAt), "MM/dd/yyyy");
     }
     return result[0] + result[1][0];
   };
@@ -117,17 +129,17 @@ const PostPage = () => {
       </Flex>
     );
   }
-  if (!currentPost) return null;
+  if (!currentComment) return null;
   return (
     <>
       <Flex>
         <Flex w={"full"} alignItems={"center"} gap={3}>
           <Avatar
-            name={user?.profile.name}
-            src={user?.profile.avatar}
+            name={currentComment?.userId.profile.name}
+            src={currentComment?.userId.profile.avatar}
             size={"md"}
             onClick={() => {
-              navigate(`/${currentPost.postedBy.userName}`);
+              navigate(`/${currentComment?.userId.userName}`);
             }}
           />
           <Flex>
@@ -136,10 +148,10 @@ const PostPage = () => {
               fontWeight={"bold"}
               className="text-underline"
               onClick={() => {
-                navigate(`/${currentPost.postedBy.userName}`);
+                navigate(`/${currentComment?.userId.userName}`);
               }}
             >
-              {user?.userName}
+              {currentComment.userId?.userName}
             </Text>
             <Image src="/verified.png" w="4" h={4} ml={4} />
           </Flex>
@@ -148,7 +160,7 @@ const PostPage = () => {
           <Text fontSize={"sm"} color={"gray.light"}>
             {formatDate()}
           </Text>
-          {currentUser?._id === currentPost.postedBy?._id && (
+          {currentUser?._id === currentComment?.userId?._id && (
             <Popover
               isOpen={isOpen}
               onClose={onClose}
@@ -190,7 +202,7 @@ const PostPage = () => {
                       fontWeight="normal"
                       colorScheme="red"
                       fontSize="sm"
-                      onClick={handleDeletePost}
+                      onClick={handleDeleteComment}
                     >
                       Delete
                     </Button>
@@ -202,22 +214,21 @@ const PostPage = () => {
         </Flex>
       </Flex>
 
-      <Text my={3}>{currentPost.content}</Text>
+      <Text my={3}>{currentComment?.content}</Text>
 
-      {currentPost.image && (
+      {currentComment?.image && (
         <Box
           borderRadius={6}
           overflow={"hidden"}
           border={"1px solid"}
           borderColor={"gray.light"}
         >
-          <Image src={currentPost.image} w={"full"} />
+          <Image src={currentComment?.image} w={"full"} />
         </Box>
       )}
       <Flex gap={3} my={3}>
-        <Actions post={currentPost} />
+        <CommentActions comment={currentComment} />
       </Flex>
-
       <Divider my={4} />
       <Flex justifyContent={"space-between"}>
         <Flex gap={2} alignItems={"center"}>
@@ -233,10 +244,15 @@ const PostPage = () => {
         </Flex>
       )}
       <Divider my={4} />
-      {comments.map((comment) => (
-        <Comment key={comment._id} comment={comment} postedBy={currentPost.postedBy.userName} type={"comment"}/>
+      {replies.map((reply) => (
+        <Comment
+          key={reply._id}
+          comment={reply}
+          postedBy={currentComment?.userId.userName}
+          type={"reply"}
+        />
       ))}
     </>
   );
 };
-export default PostPage;
+export default ReplyPage;

@@ -8,12 +8,7 @@ const commentSchema = new Schema({
         ref: 'User',
         required: true,
     },
-    postId: {
-        type: Schema.Types.ObjectId,
-        ref: 'Post',
-        required: true,
-    },
-    text:{
+    content:{
         type:String,
         MaxLength: 500
     },
@@ -25,11 +20,14 @@ const commentSchema = new Schema({
         type: Schema.Types.ObjectId, //userID
         ref: 'User',
     }],
+    replies:[{
+        type: Schema.Types.ObjectId, //commentID
+        ref: 'Comment',
+    }],
     parentComment: {
-        type: mongoose.Types.ObjectId, //commentID
+        type:String,
         required:false,
-        default:null,
-    },
+    }
 }, {
     timestamps:true,
 });
