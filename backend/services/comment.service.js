@@ -3,6 +3,7 @@ const Comment = require("../models/comment.model");
 const User = require("../models/user.model");
 const { uploadImage } = require("../services/upload.service");
 const { BadRequestError } = require("../core/error.response");
+const NotificationService = require("../services/notification.service");
 
 class CommentService {
   static create = async (postId, { userId, content, file }) => {
@@ -30,6 +31,16 @@ class CommentService {
     await comment.save();
     post.comments.push(comment._id);
     await post.save();
+
+    NotificationService.create(userId, {
+      target: {
+        userId: null,
+        postId: post._id,
+        commentId: null,
+      },
+      type: "replypost",
+      content: `${user?.profile.name} has replied your post.`,
+    });
 
     return await Comment.findById(comment._id)
       .select("-__v -updatedAt -postId")
@@ -68,6 +79,16 @@ class CommentService {
     comment.replies.push(subComment._id);
     await comment.save();
 
+    NotificationService.create(userId, {
+      target: {
+        userId: null,
+        postId: null,
+        commentId: commentId,
+      },
+      type: "replycomment",
+      content: `${user?.profile.name} has replied your comment.`,
+    });
+
     return await Comment.findById(subComment._id)
       .select("-__v -updatedAt")
       .populate({
@@ -95,6 +116,15 @@ class CommentService {
         },
         { new: true }
       ).lean();
+      NotificationService.create(userId, {
+        target: {
+          userId: null,
+          postId: null,
+          commentId: commentId,
+        },
+        type: "replycomment",
+        content: `${user?.profile.name} has liked your comment.`,
+      });
     } else {
       comment = await Comment.findOneAndUpdate(
         { _id: commentId },

@@ -28,8 +28,10 @@ import {
   import userAtom from "../atoms/userAtom";
   import { useNavigate } from "react-router-dom";
 import commentsAtom from "../atoms/commentsAtom";
+import repliesAtom from "../atoms/repliesAtom";
   
-  const CreateReply = ({ comment }) => {
+  const CreateReply = ({ comment, type }) => {
+    console.log("create reply");
     const { isOpen, onOpen, onClose } = useDisclosure();
     const {
       isOpen: isOpenAlertDialog,
@@ -38,6 +40,7 @@ import commentsAtom from "../atoms/commentsAtom";
     } = useDisclosure();
     const user = useRecoilValue(userAtom);
     const [comments, setComments] = useRecoilState(commentsAtom);
+    const [replies, setReplies] = useRecoilState(repliesAtom);
     const [imgUrl, setImgUrl] = useState(null);
     const [inputs, setInput] = useState(false);
     const [isreplying, setIsReplying] = useState(false);
@@ -80,13 +83,23 @@ import commentsAtom from "../atoms/commentsAtom";
           return;
         }
         showToast(result.statusCode, result.message, "success");
-        const updatedComments = comments.map(p => {
-          if(p._id === comment._id) {
-            return { ...p, replies: [...p.replies, result.metadata ] };
-          }
-          return p;
-        });
-        setComments(updatedComments);
+        if(type === "comment") {
+          const updatedComments = comments.map(p => {
+            if(p._id === comment._id) {
+              return { ...p, replies: [...p.replies, result.metadata ] };
+            }
+            return p;
+          });
+          setComments(updatedComments);
+        } else {
+          const updatedReplies = replies.map(p => {
+            if(p._id === comment._id) {
+              return { ...p, replies: [...p.replies, result.metadata ] };
+            }
+            return p;
+          });
+          setReplies(updatedReplies);
+        }
       } catch (err) {
         showToast("Error", err, "error");
       } finally {

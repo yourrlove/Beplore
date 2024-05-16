@@ -4,6 +4,7 @@ const User = require("../models/user.model");
 const Comment = require("../models/comment.model");
 const { uploadImage, destroyImage } = require("./upload.service");
 const { BadRequestError } = require("../core/error.response");
+const NotificationService = require("./notification.service");
 
 class PostService {
   static create = async ({ userId, content, file }) => {
@@ -11,17 +12,29 @@ class PostService {
     if (!user) {
       throw new BadRequestError("User not found!");
     }
+    console.log({ userId, content, file });
     const post = new Post({
       content: content,
       postedBy: userId,
     });
-    const { image_url } = await uploadImage({
-      path: file.path,
-      name: `${user._id}-${post._id}`,
-    });
-
-    post.image = image_url;
+    if (file != undefined) {
+      const { image_url } = await uploadImage({
+        path: file.path,
+        name: `${user._id}-${post._id}`,
+      });
+      post.image = image_url;
+    }
     await post.save();
+
+    NotificationService.create(userId, {
+      target: {
+        userId: null,
+        postId: post._id,
+        commentId: null,
+      },
+      type: "post",
+      content: `${user?.profile.name} has posted a new thread.`,
+    });
 
     return await Post.findById(post._id)
       .select("-__v -updatedAt")
@@ -60,6 +73,10 @@ class PostService {
   };
 
   static updateLikes = async (userId, postId) => {
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new BadRequestError("User not found!");
+    }
     let post = await Post.findById({ _id: postId });
     const userLikedPost = post.likes.includes(userId);
     if (!userLikedPost) {
@@ -72,6 +89,15 @@ class PostService {
         },
         { new: true }
       ).lean();
+      NotificationService.create(userId, {
+        target: {
+          userId: null,
+          postId: post._id,
+          commentId: null,
+        },
+        type: "replypost",
+        content: `${user?.profile.name} has liked your thread.`,
+      });
     } else {
       post = await Post.findOneAndUpdate(
         { _id: postId },
@@ -175,12 +201,12 @@ class PostService {
     let options = {};
     if (keyword === "undefined") {
       options = {
-        postedBy: { $ne: currentUser }
+        postedBy: { $ne: currentUser },
       };
     } else {
       options = {
-        postedBy: { $ne: currentUser }, 
-        content: { $regex: new RegExp(keyword, "i") } 
+        postedBy: { $ne: currentUser },
+        content: { $regex: new RegExp(keyword, "i") },
       };
     }
     const posts = await Post.find(options)

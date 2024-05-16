@@ -4,6 +4,7 @@ const { getInfoData, flattenNestedObject } = require("../utils/index");
 const { createKeyToken } = require("../utils/authUtils");
 const bcrypt = require("bcrypt");
 const { uploadImage, destroyImage } = require("../services/upload.service");
+const NotificationService = require("../services/notification.service");
 
 class UserService {
   static create = async ({ username, name, email, password }) => {
@@ -41,8 +42,6 @@ class UserService {
   };
 
   static login = async ({ email, password }) => {
-    console.log(email, password);
-
     const user = await User.findOne({ email: email });
     if (!user) {
       throw new BadRequestError("Wrong email!");
@@ -60,7 +59,7 @@ class UserService {
     return {
       token: token,
       user: getInfoData(
-        ["_id", "userName", "avatar"],
+        ["_id", "userName", "avatar", "following"],
         flattenNestedObject(user, ["profile"])
       ),
     };
@@ -145,6 +144,15 @@ class UserService {
         },
         { new: true }
       ).lean();
+      NotificationService.create(currentUserId, {
+        target: {
+          userId: userIdTarget,
+          postId: null,
+          commentId: null,
+        },
+        type: "user",
+        content: `${currentUser?.profile.name} has followed you.`,
+      });
     } else {
       // unfollow
       userTarget = await User.findOneAndUpdate(

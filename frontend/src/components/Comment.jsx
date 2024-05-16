@@ -16,7 +16,6 @@ import {
 } from "@chakra-ui/react";
 import { useState } from "react";
 import { BsThreeDots } from "react-icons/bs";
-import CreateComment from "./AddComment";
 import userAtom from "../atoms/userAtom";
 import { useRecoilState, useRecoilValue } from "recoil";
 import useShowToast from "../hooks/useShowToast";
@@ -257,7 +256,7 @@ const Comment = ({ comment, postedBy, type }) => {
                 ></path>
               </svg>
 
-              {type === "comment" ? <CreateComment /> : <CreateReply />}
+              <CreateReply comment={comment} type={type} />
             </Flex>
             <Flex gap={2} alignItems={"center"}>
               <Text color={"gray.light"} fontSize="sm">
