@@ -202,20 +202,26 @@ class UserService {
 
   static getAllUsers = async ({ currentUser, keyword }) => {
     let options = {};
+    let users;
     if (keyword === "undefined") {
       options = { _id: { $ne: currentUser } };
+      users = await User.find(options)
+        .select("_id userName profile.name profile.avatar profile.followers")
+        .sort({ 'profile.followers' : -1})
+        .lean();
     } else {
       options = {
         _id: { $ne: currentUser },
-        $or: [
-          { userName: { $regex: new RegExp(keyword, "i") } },
-          { "profile.name": { $regex: new RegExp(keyword, "i") } },
-        ],
+        $text: { $search: keyword },
       };
+      users = await User.find(options, {
+        score: { $meta: "textScore" },
+      })
+        .sort({ score: { $meta: "textScore" } })
+        .select("_id userName profile.name profile.avatar profile.followers")
+        .lean();
     }
-    const users = await User.find(options)
-      .select("_id userName profile.name profile.avatar profile.followers")
-      .lean();
+
     if (!users) {
       throw new BadRequestError("Not have any registered user!");
     }

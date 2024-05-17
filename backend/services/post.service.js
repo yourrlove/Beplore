@@ -5,6 +5,7 @@ const Comment = require("../models/comment.model");
 const { uploadImage, destroyImage } = require("./upload.service");
 const { BadRequestError } = require("../core/error.response");
 const NotificationService = require("./notification.service");
+const { search } = require("../configs/cloudinary.config");
 
 class PostService {
   static create = async ({ userId, content, file }) => {
@@ -198,18 +199,14 @@ class PostService {
   };
 
   static getPostsByKeyword = async ({ currentUser, keyword }) => {
+    console.log(keyword);
     let options = {};
-    if (keyword === "undefined") {
+    let posts;
+    if (keyword === "undefined" || keyword === "") {
       options = {
         postedBy: { $ne: currentUser },
       };
-    } else {
-      options = {
-        postedBy: { $ne: currentUser },
-        content: { $regex: new RegExp(keyword, "i") },
-      };
-    }
-    const posts = await Post.find(options)
+      posts = await Post.find(options)
       .select("-__v -updatedAt")
       .populate("postedBy", "userName profile.name profile.avatar")
       .populate({
@@ -221,6 +218,26 @@ class PostService {
       })
       .sort({ createdAt: -1 })
       .lean();
+    } else {
+      options = {
+        postedBy: { $ne: currentUser },
+        $text: { $search: keyword },
+      };
+      posts = await Post.find(options, {
+        score: { $meta: "textScore" },
+      })
+      .select("-__v -updatedAt")
+      .populate("postedBy", "userName profile.name profile.avatar")
+      .populate({
+        path: "comments",
+        populate: {
+          path: "userId",
+          select: "userName profile.avatar",
+        },
+      })
+      .sort({ createdAt: -1 })
+      .lean();
+    }
     return posts;
   };
 
