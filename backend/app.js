@@ -6,6 +6,8 @@ const port = 3000;
 require("dotenv").config();
 
 const mongoose = require("./configs/mongodb.config");
+// const { initialize } = require('./database/init.mysql');
+// initialize();
 
 const userRouter = require("./routes/user.route");
 const postRouter = require("./routes/post.route");
